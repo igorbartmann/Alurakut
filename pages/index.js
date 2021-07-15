@@ -22,9 +22,52 @@ function ProfileSidebar(propriedades) {
   )
 }
 
+function ProfileRelationsBox(propriedades) {
+  return (
+    <ProfileRelationsBoxWrapper>
+      <h2 className="smallTitle">{propriedades.title} ({propriedades.items.length})</h2>
+      <ul>
+        {propriedades.items.map((item) => {
+          return (
+            <li key={item.id}>
+              <a href={`https://github.com/${item.login}`}>
+                <img src={`https://github.com/${item.login}.png`} />
+                <span>{item.login}</span>
+              </a>
+            </li>
+          )
+        })}
+      </ul>
+    </ProfileRelationsBoxWrapper>
+  )
+}
+
 export default function Home() {
+  // user logado
   const githubUser = 'igorbartmann';
 
+  // seguidores (faz uma reques para o GitHub)
+  const [seguidores, setSeguidores] = React.useState([]);
+  React.useEffect(function() {
+    fetch('https://api.github.com/users/igorbartmann/followers')
+    .then((respostaDoServidor) => {
+      return respostaDoServidor.json();
+    })
+    .then((respostaCompletaJson) => {
+      setSeguidores(respostaCompletaJson);
+    })
+  }, [])
+
+  // Comunidade (inicía com uma comunidade padrão pré-configurada)
+  const comunidadePadrao = {
+    id: '1',
+    title: 'Eu odeio acordar cedo',
+    urlImage: 'https://alurakut.vercel.app/capa-comunidade-01.jpg',
+  }
+
+  const [comunidades, setComunidades] = React.useState([comunidadePadrao]);
+
+  // Pessoas da comunidade
   const pessoasFavoritas = [
     'juunegreiros',
     'omariosouto',
@@ -33,14 +76,6 @@ export default function Home() {
     'marcobrunodev',
     'felipefialho'
   ]
-
-  const comunidadePadrao = {
-    id: '1',
-    title: 'Eu odeio acordar cedo',
-    urlImage: 'https://alurakut.vercel.app/capa-comunidade-01.jpg',
-  }
-
-  const [comunidades, setComunidades] = React.useState([comunidadePadrao]);
 
   return (
     <>
@@ -101,6 +136,8 @@ export default function Home() {
         </div>
 
         <div className="profileRelationsArea" style={{ gridArea: 'profileRelationsArea' }}>
+          <ProfileRelationsBox title="Seguidores" items={seguidores}/>
+
           <ProfileRelationsBoxWrapper>
             <h2 className="smallTitle">Pessoas da Comunidade ({pessoasFavoritas.length})</h2>
             <ul>
