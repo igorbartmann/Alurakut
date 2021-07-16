@@ -43,30 +43,53 @@ function ProfileRelationsBox(propriedades) {
 }
 
 export default function Home() {
-  // user logado
+  // Usuário
   const githubUser = 'igorbartmann';
 
-  // seguidores (faz uma reques para o GitHub)
+  // Seguidores e Comunidades, são states e os seus dados vem de uma request
   const [seguidores, setSeguidores] = React.useState([]);
+  const [comunidades, setComunidades] = React.useState([]);
   React.useEffect(function() {
+    // GET
+    // -> Seguidores
     fetch('https://api.github.com/users/igorbartmann/followers')
     .then((respostaDoServidor) => {
       return respostaDoServidor.json();
     })
     .then((respostaCompletaJson) => {
       setSeguidores(respostaCompletaJson);
+    });
+
+    // GraphQL - Graph Query Language (DATO CMS)
+    // -> Comunidades
+    fetch('https://graphql.datocms.com/', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'f86b3911a3d0a39c013aed23ff54f8',
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify({ "query": `
+      query {
+        allCommunities{
+          id,
+          title,
+          imageUrl,
+          creatorSlug
+        }
+      }`
+      })
+    })
+    .then((response) => {
+      return response.json();
+    })
+    .then((fullResponse) => {
+      const comunidadesRecebidas = fullResponse.data.allCommunities;
+      setComunidades(comunidadesRecebidas);
     })
   }, [])
 
-  // Comunidade (inicía com uma comunidade padrão pré-configurada)
-  const comunidadePadrao = {
-    id: '1',
-    title: 'Eu odeio acordar cedo',
-    urlImage: 'https://alurakut.vercel.app/capa-comunidade-01.jpg',
-  }
-
-  const [comunidades, setComunidades] = React.useState([comunidadePadrao]);
-
+  // DICA, COLOCAR AS PESSOAS TAMBEM NO "DATA CMS"
   // Pessoas da comunidade
   const pessoasFavoritas = [
     'juunegreiros',
@@ -102,13 +125,26 @@ export default function Home() {
               var urlImagemComunidade = dadosForm.get('image');
 
               const novaComunidade = {
-                id: new Date().toISOString(),
                 title: nomeComunidade,
-                urlImage: urlImagemComunidade
+                imageUrl: urlImagemComunidade,
+                creatorSlug: "igorbartmann"
               }
 
-              var comunidadesAtualizadas = [...comunidades, novaComunidade];
-              setComunidades(comunidadesAtualizadas);
+              fetch('/api/comunidades', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(novaComunidade)
+              })
+              .then(async (response) => {
+                const dados = await response.json();
+                var comunidadesAtualizadas = [...comunidades, dados.registroCadastrado];
+                setComunidades(comunidadesAtualizadas);
+              })
+              .catch((error) => {
+                alert("Ocorreu um erro ao cadastrar a comunidade!")
+              })
             }}>
               <div>
                 <input
@@ -160,8 +196,8 @@ export default function Home() {
               {comunidades.map((item) => {
                 return (
                   <li key={item.id}>
-                    <a href={`/users/${item.title}`}>
-                      <img src={item.urlImage} />
+                    <a href={`/communities/${item.id}`}>
+                      <img src={item.imageUrl} />
                       <span>{item.title}</span>
                     </a>
                   </li>
