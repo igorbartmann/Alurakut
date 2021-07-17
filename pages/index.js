@@ -1,8 +1,10 @@
 import React from 'react';
-import MainGrid from '../src/components/MainGrid/'
+import nookies from 'nookies';
+import jwt from 'jsonwebtoken'; // para decodificar o token salvo nos cookies (passados da tela de login para a home)
 import Box from '../src/components/Box/'
-import { AlurakutMenu, AlurakutProfileSidebarMenuDefault, OrkutNostalgicIconSet } from '../src/lib/AlurakutCommons'
+import MainGrid from '../src/components/MainGrid/'
 import { ProfileRelationsBoxWrapper } from '../src/components/ProfileRelations/'
+import { AlurakutMenu, AlurakutProfileSidebarMenuDefault, OrkutNostalgicIconSet } from '../src/lib/AlurakutCommons'
 
 function ProfileSidebar(propriedades) {
   return (
@@ -42,9 +44,9 @@ function ProfileRelationsBox(propriedades) {
   )
 }
 
-export default function Home() {
+export default function Home(props) { // props são as propriedades recebidas pelo método getServerSideProps
   // Usuário
-  const githubUser = 'igorbartmann';
+  const githubUser = props.githubUser;
 
   // Seguidores e Comunidades, são states e os seus dados vem de uma request
   const [seguidores, setSeguidores] = React.useState([]);
@@ -127,7 +129,7 @@ export default function Home() {
               const novaComunidade = {
                 title: nomeComunidade,
                 imageUrl: urlImagemComunidade,
-                creatorSlug: "igorbartmann"
+                creatorSlug: {githubUser}
               }
 
               fetch('/api/comunidades', {
@@ -209,4 +211,37 @@ export default function Home() {
       </MainGrid>
     </>
   )
+}
+
+
+// Método padrão (Deve conter estes nomes específicos - NÃO ALTERAR)
+// para redirecionar o usuário para a tela de login, caso não possuir um TOKEN válido e ativo.
+export async function getServerSideProps(contexto) {
+  const cookies = nookies.get(contexto);
+  const token = cookies.USER_TOKEN;
+  const tokenDecodificado = jwt.decode(token);
+
+  // Local: "http://localhost:3000/api/auth" <-> Server: "https://alurakut-igorbartmann.vercel.app/"
+  const { isAuthenticated } = await fetch('https://alurakut-igorbartmann.vercel.app/api/auth', {
+    headers: {
+      Authorization: token
+    }
+  })
+  .then((response) => response.json())
+
+  if (!isAuthenticated) {
+    return {
+      redirect: {
+        destination: '/login',
+        permanent: false,
+      }
+    }
+  }
+
+  const githubUser = tokenDecodificado.githubUser;
+  return {
+    props: {
+      githubUser: githubUser
+    }
+  }
 }
